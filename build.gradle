@@ -40,6 +40,8 @@ dependencies {
     
     compile 'com.github.samtools:htsjdk:2.6.1'
     compile 'args4j:args4j:2.33'
+    
+    compile 'org.biojava:biojava-core:4.2.4'
 }
 
 jar {

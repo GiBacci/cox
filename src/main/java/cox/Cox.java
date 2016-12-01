@@ -1,6 +1,7 @@
 package cox;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +13,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.DoubleSummaryStatistics;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.ConsoleHandler;
@@ -19,6 +21,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import org.biojava.nbio.core.sequence.DNASequence;
+import org.biojava.nbio.core.sequence.compound.DNACompoundSet;
+import org.biojava.nbio.core.sequence.compound.NucleotideCompound;
+import org.biojava.nbio.core.sequence.io.DNASequenceCreator;
+import org.biojava.nbio.core.sequence.io.FastaReader;
+import org.biojava.nbio.core.sequence.io.GenericFastaHeaderParser;
+import org.biojava.nbio.core.util.InputStreamProvider;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
@@ -110,8 +119,17 @@ public class Cox {
 	@Option(name = "-f", aliases = "--filter-qual", usage = "alignment with a mapping quality lower than this value will not be reported")
 	private int filter = -1;
 
+	/**
+	 * Estimate redundancy
+	 */
 	@Option(name = "-d", aliases = "--redundancy", usage = "redundant alignments will be saved and analyzed following specified criteria (see -c and -m options)")
 	private boolean red = false;
+
+	/**
+	 * Calculating GC count
+	 */
+	@Option(name = "-g", aliases = "--gc-count", usage = "GC count will be reported for each reference sequence in a tab separated file")
+	private boolean gc_count = false;
 
 	// External Applications
 	private BowTie2 bw2 = new BowTie2();
@@ -141,6 +159,9 @@ public class Cox {
 
 		// Building and indexing reference database
 		String faidx = this.buildDBandIndexing();
+
+		// Computing GC count if needed
+		this.getGCcontent();
 
 		// Mapping
 		String uber_map = this.map();
@@ -178,6 +199,44 @@ public class Cox {
 
 		// Clear temp and save
 		clearTempAndCollect(keep);
+	}
+
+	/**
+	 * Computes gc count for each reference sequence if needed
+	 */
+	private void getGCcontent() {
+		if (gc_count) {
+			log.info("Calculating GC content for reference sequences");
+			InputStreamProvider isp = new InputStreamProvider();
+			InputStream is = null;
+			Path output = null;
+			try {
+				output = Files.createTempFile(Paths.get(out), "gc_", ".metrics");
+				is = isp.getInputStream(reference);
+				FastaReader<DNASequence, NucleotideCompound> reader = new FastaReader<>(is,
+						new GenericFastaHeaderParser<>(), new DNASequenceCreator(DNACompoundSet.getDNACompoundSet()));
+
+				LinkedHashMap<String, DNASequence> seq = null;
+				while ((seq = reader.process(10)) != null) {
+					List<String> results = seq.entrySet().stream().map(e -> {
+						DNASequence s = e.getValue();
+						double gc = (double) s.getGCCount() / (double) s.getLength();
+						String res = String.format("%s\t%.2f", e.getKey(), gc);
+						return res;
+					}).collect(Collectors.toList());
+					Files.write(output, results, StandardOpenOption.APPEND);
+				}
+				toSave.put(output.toString(), "gc_reference.tsv");
+			} catch (IOException e) {
+				if (output != null)
+					try {
+						Files.deleteIfExists(output);
+					} catch (IOException e1) {
+						// NOTHING TO DO
+					}
+				log.info("Error/s computing GC count:" + e.getMessage());
+			}
+		}
 	}
 
 	/**
@@ -337,7 +396,7 @@ public class Cox {
 				log.warning("Cannot estimate redundancy, redundancy file will not be reported");
 				return;
 			}
-			
+
 			// Open redundant file
 			SamReader reader = SamReaderFactory.makeDefault().open(Paths.get(redundant));
 
