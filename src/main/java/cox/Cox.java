@@ -415,8 +415,7 @@ public class Cox {
 			SamReader uber_reader = SamReaderFactory.makeDefault().open(Paths.get(uber_map));
 
 			// Getting the number of aligned sequences
-			int uber_size = uber_reader.iterator().stream().filter(s -> !s.getReadUnmappedFlag())
-					.collect(Collectors.groupingBy(SAMRecord::getReadName)).keySet().size();
+			long uber_size = uber_reader.iterator().stream().filter(s -> !s.getReadUnmappedFlag() && !s.isSecondaryOrSupplementary()).count();
 
 			// Statistics of redundant alignment
 			DoubleSummaryStatistics statsWithin = results.stream().mapToDouble(Long::doubleValue).summaryStatistics();
@@ -454,8 +453,7 @@ public class Cox {
 			}
 
 			// Indexing and sorting redundant alignments. This step needs to be
-			// done
-			// for coverage estimation
+			// done for coverage estimation
 			log.info("Indexing and sorting redundant alignment file");
 			// log.log(Level.INFO, "FAIDX = {0}, REDUNDANT = {1}", new String[]
 			// {

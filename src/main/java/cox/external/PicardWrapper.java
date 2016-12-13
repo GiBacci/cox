@@ -191,7 +191,7 @@ public class PicardWrapper implements ExternalApplication {
 		String[] results = new String[2];
 		String extension = NameFormatter.getExtension(bam_or_sam);
 		try {
-			String output = Files.createTempFile(Paths.get(getOutputDir()), "markduplicates_", "." + extension)
+			String output = Files.createTempFile(Paths.get(getOutputDir()), "markduplicates_", extension)
 					.toString();
 			String metrics = output.replaceFirst("\\." + extension + "$", ".metrics");
 
