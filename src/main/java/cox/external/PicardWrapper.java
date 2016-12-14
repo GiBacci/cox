@@ -193,7 +193,7 @@ public class PicardWrapper implements ExternalApplication {
 		try {
 			String output = Files.createTempFile(Paths.get(getOutputDir()), "markduplicates_", extension)
 					.toString();
-			String metrics = output.replaceFirst("\\." + extension + "$", ".metrics");
+			String metrics = output.replaceFirst(extension + "$", ".metrics");
 
 			String cmd = String.format("java -jar %s MarkDuplicates INPUT=%s OUTPUT=%s METRICS_FILE=%s "
 					+ "ASSUME_SORT_ORDER=%s VALIDATION_STRINGENCY=LENIENT MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=1000 "
