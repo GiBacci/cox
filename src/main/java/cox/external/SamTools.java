@@ -112,7 +112,7 @@ public class SamTools implements ExternalApplication {
 	}
 
 	/**
-	 * Sorts a bam file
+	 * Sorts a bam file by leftmost coordinates
 	 * 
 	 * @param bam
 	 *            the alignment file

@@ -82,6 +82,12 @@ public class Cox {
 	 */
 	@Option(name = "-r", aliases = "--ref", usage = "reference sequence file", required = true)
 	private String reference;
+	
+	/**
+	 * References
+	 */
+	@Option(name = "--rebuildDB", usage = "reference database will be rebuilt", required = false)
+	private boolean rebuild = false;
 
 	/**
 	 * Output directory
@@ -130,6 +136,12 @@ public class Cox {
 	 */
 	@Option(name = "-g", aliases = "--gc-count", usage = "GC count will be reported for each reference sequence in a tab separated file")
 	private boolean gc_count = false;
+	
+	/**
+	 * Reporting ALL valid alignments (can be really slow expecially in single genome analysis)
+	 */
+	@Option(name = "-a", aliases = "--all", usage = "all alignments will be reported (can be really slow). This flag is needed for redundancy estimation (see -d option)")
+	private boolean all = false;
 
 	// External Applications
 	private BowTie2 bw2 = new BowTie2();
@@ -244,7 +256,7 @@ public class Cox {
 	 */
 	private void setUpApplications() {
 
-		// Chack if output folder exists
+		// Check if output folder exists
 		Path output = Paths.get(out);
 		if (Files.notExists(output)) {
 			log.info("Output folder does not exist, trying to create it");
@@ -268,6 +280,9 @@ public class Cox {
 			log.severe("You have to specify at least a single read file");
 			System.exit(-1);
 		}
+		
+		// If all is not specified redundancy analyses will not be performed
+		red = (all) ? false : red;
 	}
 
 	/**
@@ -552,6 +567,9 @@ public class Cox {
 		String uber_map = null;
 
 		log.info("Start mapping");
+		
+		// Check for other options
+		String otheropt = (all) ? "-a" : ""; 
 
 		// If forward, reverse and single files have been specified, mapping all
 		// files
@@ -559,10 +577,10 @@ public class Cox {
 
 			log.log(Level.INFO, "Forward reads: {0}", Paths.get(forward).toAbsolutePath().toString());
 			log.log(Level.INFO, "Reverse reads: {0}", Paths.get(reverse).toAbsolutePath().toString());
-			log.log(Level.INFO, "Single reads: {0}", Paths.get(single).toAbsolutePath().toString());
-
-			String single_map = bw2.mapSingleEnd(single, "-a");
-			String paired_map = bw2.mapPairedEnd(forward, reverse, "-a");
+			log.log(Level.INFO, "Single reads: {0}", Paths.get(single).toAbsolutePath().toString());		
+			
+			String single_map = bw2.mapSingleEnd(single, otheropt);
+			String paired_map = bw2.mapPairedEnd(forward, reverse, otheropt);
 
 			// Handling errors
 			if (single_map != null && paired_map == null) { // Single mapped,
@@ -598,7 +616,7 @@ public class Cox {
 
 			log.log(Level.INFO, "Single reads: {0}", Paths.get(single).toAbsolutePath().toString());
 
-			uber_map = bw2.mapSingleEnd(single, "-a");
+			uber_map = bw2.mapSingleEnd(single, otheropt);
 
 			// If only paired files have been specified, mapping only paired
 			// reads
@@ -607,7 +625,7 @@ public class Cox {
 			log.log(Level.INFO, "Forward reads: {0}", Paths.get(forward).toAbsolutePath().toString());
 			log.log(Level.INFO, "Reverse reads: {0}", Paths.get(reverse).toAbsolutePath().toString());
 
-			uber_map = bw2.mapPairedEnd(forward, reverse, "-a");
+			uber_map = bw2.mapPairedEnd(forward, reverse, otheropt);
 		}
 
 		// If mapping didn't work log message and leave
@@ -631,6 +649,7 @@ public class Cox {
 		// Building reference database
 		log.log(Level.INFO, "Building Bowtie2 database: {0}", Paths.get(reference).toAbsolutePath().toString());
 
+		bw2.setForceRebuild(rebuild);
 		// If building didn't work, logging, removing temp files, and leave
 		if (!bw2.buildReference(reference)) {
 			log.severe("Cannot build Bowtie2 database");

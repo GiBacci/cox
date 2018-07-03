@@ -43,6 +43,11 @@ public class BowTie2 implements Mapper, ExternalApplication {
 	 * The reference database (once built)
 	 */
 	private String reference = null;
+	
+	/**
+	 * If <code>true</code> the reference database will be rebuilt even if it exists
+	 */
+	private boolean forceRebuild = false;
 
 	/**
 	 * The name of the bowtie2 log file
@@ -136,8 +141,9 @@ public class BowTie2 implements Mapper, ExternalApplication {
 	@Override
 	public boolean buildReference(String reference) {
 
-		// Check if reference database exists
-		if (Files.exists(Paths.get(reference + ".1.bt2"))) {
+		// Check if reference database exists. If forceRebuild is set to true
+		// the reference will be rebuilt in any case
+		if (Files.exists(Paths.get(reference + ".1.bt2")) && !forceRebuild) {
 			this.reference = reference;
 			return true;
 		}
@@ -206,7 +212,7 @@ public class BowTie2 implements Mapper, ExternalApplication {
 	 * Produces a sam/bam file reporting only redundant alignment. An alignment
 	 * is considered redundant, according to the bowtie2 manual, if:<br>
 	 * 1 - It has the AS flag (basically the read aligns somewhere)<br>
-	 * 2 - It has the XS flag (basically the read has another valid
+	 * 2 - It has the XS flag (basically the read has (at least) another valid
 	 * alignment)<br>
 	 * 3 - The AS flag is equal to the XS flag and they are both equal to the
 	 * best AS flag of the batch (basically: AS == XS == best(AS && XS))<br>
@@ -276,7 +282,7 @@ public class BowTie2 implements Mapper, ExternalApplication {
 	}
 
 	/**
-	 * Each batch of reads is divided int paired and unpaired. The paired reads
+	 * Each batch of reads is divided into paired and unpaired. The paired reads
 	 * are in turn divided into forward and reverse reads. Then each group is
 	 * parsed using the {@link BowTie2#getMultimappedReads(List)} method.
 	 * 
@@ -409,6 +415,20 @@ public class BowTie2 implements Mapper, ExternalApplication {
 		Collections.sort(toSort, comparator);
 		Collections.reverse(toSort);
 		return toSort;
+	}
+
+	/**
+	 * @return the forceRebuild
+	 */
+	public boolean isForceRebuild() {
+		return forceRebuild;
+	}
+
+	/**
+	 * @param forceRebuild the forceRebuild to set
+	 */
+	public void setForceRebuild(boolean forceRebuild) {
+		this.forceRebuild = forceRebuild;
 	}
 
 }
